@@ -48,14 +48,15 @@ export function useRealtimeProfile(userId?: string, username?: string) {
     if (!userId) return;
 
     const channel = supabase
-      .channel(`profile_${userId}`)
+      .channel(`profiles`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
-        table: 'profiles',
-        filter: `id=eq.${userId}`
+        table: 'profiles'
       }, (payload) => {
-        setProfile(payload.new as Profile);
+        if (payload.new.id === userId) {
+          setProfile(payload.new as Profile);
+        }
       })
       .subscribe();
 
