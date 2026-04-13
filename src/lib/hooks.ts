@@ -6,7 +6,7 @@ import {
   getQuestionsForProfile, 
   getProfileByUsername,
   getProfileById,
-  updateProfile,
+  updateProfile as updateProfileDb,
   getUserLikes,
   likeQuestion,
   unlikeQuestion
@@ -158,6 +158,15 @@ export function useProfile(username?: string, userId?: string) {
     setLoading(false);
   }, [username, userId]);
 
+  const updateProfile = useCallback(async (updates: Partial<Profile>) => {
+    if (!userId) return null;
+    const updated = await updateProfileDb(userId, updates);
+    if (updated) {
+      setProfile(updated);
+    }
+    return updated;
+  }, [userId]);
+
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
@@ -184,7 +193,7 @@ export function useProfile(username?: string, userId?: string) {
 
   const handleUpdate = async (updates: Partial<Profile>) => {
     if (!profile) return null;
-    const updated = await updateProfile(profile.id, updates);
+    const updated = await updateProfileDb(profile.id, updates);
     if (updated) {
       setProfile(updated);
     }
