@@ -51,9 +51,14 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
     .from('profiles')
     .select('id')
     .ilike('username', username)
-    .single();
+    .limit(1);
   
-  return !error && !data;
+  if (error) {
+    console.error('Username check error:', error.message);
+    return false;
+  }
+
+  return data.length === 0;
 }
 
 export async function getProfileById(id: string): Promise<Profile | null> {
