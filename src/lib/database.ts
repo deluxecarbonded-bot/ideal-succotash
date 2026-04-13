@@ -83,6 +83,17 @@ export async function updateProfile(id: string, updates: Partial<Profile>): Prom
 }
 
 export async function getQuestionsForProfile(recipientId: string, includePrivate: boolean = false): Promise<Question[]> {
+  if (!recipientId || recipientId === '') {
+    console.error('Invalid recipientId: empty string');
+    return [];
+  }
+
+  const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recipientId);
+  if (!isValidUuid) {
+    console.error('Invalid recipientId: not a valid UUID:', recipientId);
+    return [];
+  }
+
   let query = supabase
     .from('questions')
     .select('*')

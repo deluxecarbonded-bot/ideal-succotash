@@ -15,23 +15,18 @@ function AskContent() {
   const username = params?.username as string | undefined;
   const { user } = useAuth();
   
-  const { profile: recipient } = useProfile(username);
-  const { createQuestion } = useProfileQuestions(user?.id || '', true);
+  const { profile: recipient, loading: recipientLoading } = useProfile(username);
+  const { createQuestion: createQuestionFn } = useProfileQuestions(user?.id || '', true);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (content: string, isAnonymous: boolean) => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
-    if (!recipient) {
+    if (!user || !recipient || recipientLoading) {
       router.push('/login');
       return;
     }
 
     setLoading(true);
-    const question = await createQuestion({
+    const question = await createQuestionFn?.({
       content,
       recipient_id: recipient.id,
       author_id: isAnonymous ? null : user.id,

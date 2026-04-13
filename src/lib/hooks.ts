@@ -31,40 +31,6 @@ export function useQuestions() {
     loadPublicQuestions();
   }, [loadPublicQuestions]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('public_questions')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'questions',
-        filter: 'is_answered=eq.true'
-      }, (payload) => {
-        setQuestions(prev => [payload.new as Question, ...prev]);
-      })
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'questions' 
-      }, (payload) => {
-        setQuestions(prev => prev.map(q => 
-          q.id === payload.new.id ? { ...q, ...payload.new } : q
-        ));
-      })
-      .on('postgres_changes', { 
-        event: 'DELETE', 
-        schema: 'public', 
-        table: 'questions' 
-      }, (payload) => {
-        setQuestions(prev => prev.filter(q => q.id !== payload.old.id));
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
   return { questions, loading, error, refetch: loadPublicQuestions };
 }
 
@@ -85,6 +51,8 @@ export function useProfileQuestions(profileId: string, includePrivate: boolean =
   }, [loadQuestions]);
 
   useEffect(() => {
+    if (!profileId || profileId === '') return;
+
     const channel = supabase
       .channel(`profile_questions_${profileId}`)
       .on('postgres_changes', { 
@@ -122,6 +90,10 @@ export function useProfileQuestions(profileId: string, includePrivate: boolean =
       supabase.removeChannel(channel);
     };
   }, [profileId, includePrivate]);
+
+  if (!profileId || profileId === '') {
+    return { questions: [], loading: false, error: 'Invalid profile ID', refetch: loadQuestions };
+  }
 
   const handleCreate = async (question: {
     content: string;

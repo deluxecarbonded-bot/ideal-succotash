@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams } from 'next/navigation';
 import { Question, Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { useProfileQuestions, useLikes, useProfile } from '@/lib/hooks';
+import { useProfile, useProfileQuestions, useLikes } from '@/lib/hooks';
 import QuestionCard from '@/components/QuestionCard';
 import ProfileCard from '@/components/ProfileCard';
 
@@ -17,10 +17,18 @@ export default function ProfilePage() {
   const [filter, setFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
 
   const { profile, loading: profileLoading, updateProfile: updateUserProfile } = useProfile(username);
-  const { questions, loading: questionsLoading, refetch, answerQuestion, deleteQuestion } = useProfileQuestions(
-    profile?.id || '', 
-    !username || username === currentUser?.username
-  );
+  
+  const profileId = profile?.id;
+  const canViewPrivate = !username || username === currentUser?.username;
+  
+  const { 
+    questions, 
+    loading: questionsLoading, 
+    refetch, 
+    answerQuestion, 
+    deleteQuestion 
+  } = useProfileQuestions(profileId || '', canViewPrivate);
+  
   const { likedQuestions, toggleLike, isLiked } = useLikes(currentUser?.id);
 
   const isOwner = !username || (currentUser?.username === username);
@@ -35,15 +43,15 @@ export default function ProfilePage() {
   });
 
   const handleAnswer = async (id: string, answer: string) => {
-    await answerQuestion(id, answer);
+    await answerQuestion?.(id, answer);
   };
 
   const handleLike = async (id: string) => {
-    await toggleLike(id);
+    await toggleLike?.(id);
   };
 
   const handleDelete = async (id: string) => {
-    await deleteQuestion(id);
+    await deleteQuestion?.(id);
   };
 
   const handleShare = (question: Question) => {
@@ -52,7 +60,7 @@ export default function ProfilePage() {
   };
 
   const handleUpdateProfile = async (updates: Partial<Profile>) => {
-    await updateUserProfile(updates);
+    await updateUserProfile?.(updates);
   };
 
   const stats = {
@@ -61,7 +69,7 @@ export default function ProfilePage() {
     likes: questions.reduce((sum, q) => sum + q.likes_count, 0),
   };
 
-  if (profileLoading || questionsLoading) {
+  if (profileLoading) {
     return (
       <div className="text-center py-8 opacity-50" style={{ color: 'var(--text-primary)' }}>
         Loading...
@@ -106,7 +114,11 @@ export default function ProfilePage() {
 
       <div className="space-y-4">
         <AnimatePresence mode="popLayout">
-          {filteredQuestions.length === 0 ? (
+          {questionsLoading ? (
+            <div className="text-center py-8 opacity-50" style={{ color: 'var(--text-primary)' }}>
+              Loading questions...
+            </div>
+          ) : filteredQuestions.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
