@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { getProfileByUsername, getProfileById, createQuestion } from '@/lib/database';
+import { useProfile, useProfileQuestions } from '@/lib/hooks';
 import QuestionForm from '@/components/QuestionForm';
 import { ArrowLeftIcon } from '@/components/Icons';
 import Link from 'next/link';
@@ -16,24 +15,9 @@ function AskContent() {
   const username = params?.username as string | undefined;
   const { user } = useAuth();
   
-  const [recipient, setRecipient] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadRecipient = useCallback(async () => {
-    setLoading(true);
-    if (username) {
-      const profile = await getProfileByUsername(username);
-      setRecipient(profile);
-    } else if (user) {
-      const profile = await getProfileById(user.id);
-      setRecipient(profile);
-    }
-    setLoading(false);
-  }, [username, user]);
-
-  useEffect(() => {
-    loadRecipient();
-  }, [loadRecipient]);
+  const { profile: recipient } = useProfile(username);
+  const { createQuestion } = useProfileQuestions(user?.id || '', true);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (content: string, isAnonymous: boolean) => {
     if (!user) {
@@ -46,6 +30,7 @@ function AskContent() {
       return;
     }
 
+    setLoading(true);
     const question = await createQuestion({
       content,
       recipient_id: recipient.id,
@@ -53,18 +38,12 @@ function AskContent() {
       is_anonymous: isAnonymous,
     });
 
+    setLoading(false);
+    
     if (question) {
       router.push('/profile');
     }
   };
-
-  if (loading) {
-    return (
-      <div className="text-center py-8 opacity-50" style={{ color: 'var(--text-primary)' }}>
-        Loading...
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -99,6 +78,7 @@ function AskContent() {
       <QuestionForm
         recipientUsername={username}
         onSubmit={handleSubmit}
+        loading={loading}
         placeholder={username ? 'What would you like to ask?' : 'What would you like to ask yourself or others?'}
       />
     </div>

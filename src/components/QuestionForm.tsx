@@ -8,12 +8,14 @@ interface QuestionFormProps {
   recipientUsername?: string;
   onSubmit: (content: string, isAnonymous: boolean) => void;
   placeholder?: string;
+  loading?: boolean;
 }
 
 export default function QuestionForm({ 
   recipientUsername, 
   onSubmit, 
-  placeholder = 'Ask a question...' 
+  placeholder = 'Ask a question...',
+  loading = false
 }: QuestionFormProps) {
   const [content, setContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
@@ -48,6 +50,7 @@ export default function QuestionForm({
         value={content}
         onChange={(e) => setContent(e.target.value.slice(0, maxLength))}
         placeholder={placeholder}
+        disabled={loading}
         className="w-full p-3 rounded-xl text-base resize-none min-h-[100px]"
         style={{ 
           backgroundColor: 'var(--bg-primary)',
@@ -63,6 +66,7 @@ export default function QuestionForm({
               type="checkbox"
               checked={isAnonymous}
               onChange={(e) => setIsAnonymous(e.target.checked)}
+              disabled={loading}
               className="w-4 h-4"
             />
             <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Anonymous</span>
@@ -76,7 +80,7 @@ export default function QuestionForm({
 
           <motion.button
             type="submit"
-            disabled={!content.trim()}
+            disabled={!content.trim() || loading}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
             style={{ 
               backgroundColor: 'var(--btn-bg)', 
@@ -86,7 +90,7 @@ export default function QuestionForm({
             whileTap={{ scale: 0.95 }}
           >
             <SendIcon />
-            Send
+            {loading ? 'Sending...' : 'Send'}
           </motion.button>
         </div>
       </div>

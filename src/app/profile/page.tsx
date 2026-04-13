@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams } from 'next/navigation';
 import { Question, Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { getProfileByUsername, getQuestionsForProfile, getUserLikes, answerQuestion as dbAnswerQuestion, deleteQuestion as dbDeleteQuestion } from '@/lib/database';
+import { useProfileQuestions, useLikes, useProfile } from '@/lib/hooks';
 import QuestionCard from '@/components/QuestionCard';
 import ProfileCard from '@/components/ProfileCard';
 
@@ -14,50 +14,20 @@ export default function ProfilePage() {
   const username = params?.username as string | undefined;
   const { user: currentUser } = useAuth();
   
-  const [profileUser, setProfileUser] = useState<Profile | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
   const [filter, setFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
-  const [loading, setLoading] = useState(true);
-  const [likedQuestions, setLikedQuestions] = useState<string[]>([]);
 
-  const loadProfile = useCallback(async () => {
-    setLoading(true);
-    if (username) {
-      const profile = await getProfileByUsername(username);
-      if (profile) {
-        setProfileUser(profile);
-        const qs = await getQuestionsForProfile(profile.id, !username || username === currentUser?.username);
-        setQuestions(qs);
-      }
-    } else if (currentUser) {
-      setProfileUser(currentUser);
-      const qs = await getQuestionsForProfile(currentUser.id, true);
-      setQuestions(qs);
-    }
-    setLoading(false);
-  }, [username, currentUser]);
-
-  const loadUserLikes = useCallback(async () => {
-    if (!currentUser) return;
-    const likes = await getUserLikes(currentUser.id);
-    setLikedQuestions(likes);
-  }, [currentUser]);
-
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
-
-  useEffect(() => {
-    if (currentUser) {
-      loadUserLikes();
-    }
-  }, [currentUser, loadUserLikes]);
+  const { profile, loading: profileLoading, updateProfile: updateUserProfile } = useProfile(username);
+  const { questions, loading: questionsLoading, refetch, answerQuestion, deleteQuestion } = useProfileQuestions(
+    profile?.id || '', 
+    !username || username === currentUser?.username
+  );
+  const { likedQuestions, toggleLike, isLiked } = useLikes(currentUser?.id);
 
   const isOwner = !username || (currentUser?.username === username);
 
   const filteredQuestions = questions.map(q => ({
     ...q,
-    is_liked: likedQuestions.includes(q.id),
+    is_liked: isLiked(q.id),
   })).filter((q) => {
     if (filter === 'answered') return q.is_answered;
     if (filter === 'unanswered') return !q.is_answered;
@@ -65,30 +35,24 @@ export default function ProfilePage() {
   });
 
   const handleAnswer = async (id: string, answer: string) => {
-    const updated = await dbAnswerQuestion(id, answer);
-    if (updated) {
-      setQuestions(questions.map(q => 
-        q.id === id ? { ...q, answer, is_answered: true } : q
-      ));
-    }
+    await answerQuestion(id, answer);
   };
 
-  const handleLike = (id: string) => {
-    setQuestions(questions.map(q => 
-      q.id === id ? { ...q, is_liked: !q.is_liked, likes_count: q.is_liked ? q.likes_count - 1 : q.likes_count + 1 } : q
-    ));
+  const handleLike = async (id: string) => {
+    await toggleLike(id);
   };
 
   const handleDelete = async (id: string) => {
-    const success = await dbDeleteQuestion(id);
-    if (success) {
-      setQuestions(questions.filter(q => q.id !== id));
-    }
+    await deleteQuestion(id);
   };
 
   const handleShare = (question: Question) => {
     const url = `${window.location.origin}/profile/${question.recipient?.username}?question=${question.id}`;
     navigator.clipboard.writeText(url);
+  };
+
+  const handleUpdateProfile = async (updates: Partial<Profile>) => {
+    await updateUserProfile(updates);
   };
 
   const stats = {
@@ -97,7 +61,7 @@ export default function ProfilePage() {
     likes: questions.reduce((sum, q) => sum + q.likes_count, 0),
   };
 
-  if (loading) {
+  if (profileLoading || questionsLoading) {
     return (
       <div className="text-center py-8 opacity-50" style={{ color: 'var(--text-primary)' }}>
         Loading...
@@ -105,7 +69,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!profileUser) {
+  if (!profile) {
     return (
       <div className="text-center py-8">
         <p style={{ color: 'var(--text-primary)' }}>User not found</p>
@@ -116,9 +80,10 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6">
       <ProfileCard
-        user={profileUser}
+        user={profile}
         stats={stats}
         isOwner={isOwner}
+        onUpdate={isOwner ? handleUpdateProfile : undefined}
       />
 
       <div className="flex gap-2 justify-center">

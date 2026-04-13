@@ -1,50 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Question } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { getPublicQuestions, getUserLikes } from '@/lib/database';
+import { useQuestions, useLikes } from '@/lib/hooks';
 import QuestionCard from '@/components/QuestionCard';
 
 export default function HomePage() {
   const { user } = useAuth();
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const { questions, loading, refetch } = useQuestions();
+  const { likedQuestions, toggleLike, isLiked } = useLikes(user?.id);
   const [filter, setFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
-  const [loading, setLoading] = useState(true);
-  const [likedQuestions, setLikedQuestions] = useState<string[]>([]);
-
-  const loadQuestions = useCallback(async () => {
-    setLoading(true);
-    const data = await getPublicQuestions(50);
-    setQuestions(data);
-    setLoading(false);
-  }, []);
-
-  const loadUserLikes = useCallback(async () => {
-    if (!user) return;
-    const likes = await getUserLikes(user.id);
-    setLikedQuestions(likes);
-  }, [user]);
-
-  useEffect(() => {
-    loadQuestions();
-  }, [loadQuestions]);
-
-  useEffect(() => {
-    if (user) {
-      loadUserLikes();
-    }
-  }, [user, loadUserLikes]);
 
   const handleLike = async (id: string) => {
-    setQuestions(questions.map(q => 
-      q.id === id ? { ...q, is_liked: !q.is_liked, likes_count: q.is_liked ? q.likes_count - 1 : q.likes_count + 1 } : q
-    ));
+    await toggleLike(id);
   };
 
   const handleDelete = (id: string) => {
-    setQuestions(questions.filter(q => q.id !== id));
+    refetch();
   };
 
   const handleShare = (question: Question) => {
@@ -60,7 +34,7 @@ export default function HomePage() {
 
   const filteredQuestions = questions.map(q => ({
     ...q,
-    is_liked: likedQuestions.includes(q.id),
+    is_liked: isLiked(q.id),
   })).filter((q) => {
     if (filter === 'answered') return q.is_answered;
     if (filter === 'unanswered') return !q.is_answered;

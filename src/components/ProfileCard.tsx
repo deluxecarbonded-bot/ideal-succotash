@@ -1,12 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User } from '@/types';
-import { LinkIcon, EditIcon } from './Icons';
+import { User, Profile } from '@/types';
+import { LinkIcon, EditIcon, CheckIcon, CloseIcon } from './Icons';
 import { useTheme } from '@/context/ThemeContext';
 
 interface ProfileCardProps {
-  user: User;
+  user: User | Profile;
   stats: {
     questionsReceived: number;
     questionsAnswered: number;
@@ -14,15 +15,30 @@ interface ProfileCardProps {
   };
   isOwner?: boolean;
   onEditProfile?: () => void;
+  onUpdate?: (updates: Partial<Profile>) => void | Promise<void>;
 }
 
-export default function ProfileCard({ user, stats, isOwner, onEditProfile }: ProfileCardProps) {
+export default function ProfileCard({ user, stats, isOwner, onEditProfile, onUpdate }: ProfileCardProps) {
   const { theme } = useTheme();
   const fillColor = theme === 'dark' ? '#ffffff' : '#000000';
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBio, setEditBio] = useState(user.bio || '');
 
   const copyLink = () => {
     const url = `${window.location.origin}/profile/${user.username}`;
     navigator.clipboard.writeText(url);
+  };
+
+  const handleSave = async () => {
+    if (onUpdate) {
+      await onUpdate({ bio: editBio });
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditBio(user.bio || '');
+    setIsEditing(false);
   };
 
   return (
@@ -52,16 +68,55 @@ export default function ProfileCard({ user, stats, isOwner, onEditProfile }: Pro
               <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
                 {user.username}
               </h1>
-              {user.bio && (
+              {isEditing ? (
+                <div className="mt-2">
+                  <textarea
+                    value={editBio}
+                    onChange={(e) => setEditBio(e.target.value)}
+                    placeholder="Write your bio..."
+                    className="w-full p-2 rounded-lg text-sm resize-none"
+                    style={{ 
+                      backgroundColor: 'rgba(128,128,128,0.1)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid rgba(128,128,128,0.2)'
+                    }}
+                    rows={2}
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <motion.button
+                      onClick={handleSave}
+                      className="p-1.5 rounded-lg"
+                      style={{ backgroundColor: 'var(--btn-bg)', color: 'var(--btn-text)' }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <CheckIcon />
+                    </motion.button>
+                    <motion.button
+                      onClick={handleCancel}
+                      className="p-1.5 rounded-lg"
+                      style={{ backgroundColor: 'rgba(128,128,128,0.2)', color: 'var(--text-primary)' }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <CloseIcon />
+                    </motion.button>
+                  </div>
+                </div>
+              ) : user.bio ? (
                 <p className="mt-1 opacity-70" style={{ color: 'var(--text-primary)' }}>
                   {user.bio}
                 </p>
-              )}
+              ) : isOwner ? (
+                <p className="mt-1 opacity-50" style={{ color: 'var(--text-primary)' }}>
+                  Add a bio...
+                </p>
+              ) : null}
             </div>
 
-            {isOwner && (
+            {isOwner && !isEditing && (
               <motion.button
-                onClick={onEditProfile}
+                onClick={() => setIsEditing(true)}
                 className="p-2 rounded-lg"
                 style={{ color: 'var(--text-primary)', opacity: 0.6 }}
                 whileHover={{ scale: 1.05, opacity: 1 }}

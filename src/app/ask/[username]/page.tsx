@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { getProfileByUsername, createQuestion } from '@/lib/database';
+import { useProfile, useProfileQuestions } from '@/lib/hooks';
 import QuestionForm from '@/components/QuestionForm';
 import { ArrowLeftIcon } from '@/components/Icons';
 import Link from 'next/link';
@@ -16,21 +15,9 @@ function AskUserContent() {
   const username = params?.username as string;
   const { user } = useAuth();
   
-  const [recipient, setRecipient] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadRecipient = useCallback(async () => {
-    setLoading(true);
-    if (username) {
-      const profile = await getProfileByUsername(username);
-      setRecipient(profile);
-    }
-    setLoading(false);
-  }, [username]);
-
-  useEffect(() => {
-    loadRecipient();
-  }, [loadRecipient]);
+  const { profile: recipient } = useProfile(username);
+  const { createQuestion } = useProfileQuestions(recipient?.id || '', false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (content: string, isAnonymous: boolean) => {
     if (!user) {
@@ -43,6 +30,7 @@ function AskUserContent() {
       return;
     }
 
+    setLoading(true);
     const question = await createQuestion({
       content,
       recipient_id: recipient.id,
@@ -50,18 +38,12 @@ function AskUserContent() {
       is_anonymous: isAnonymous,
     });
 
+    setLoading(false);
+    
     if (question) {
       router.push(`/profile/${username}`);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="text-center py-8 opacity-50" style={{ color: 'var(--text-primary)' }}>
-        Loading...
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -96,6 +78,7 @@ function AskUserContent() {
       <QuestionForm
         recipientUsername={username}
         onSubmit={handleSubmit}
+        loading={loading}
         placeholder="What would you like to ask?"
       />
     </div>
