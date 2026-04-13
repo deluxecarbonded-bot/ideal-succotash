@@ -202,7 +202,7 @@ export async function answerQuestion(questionId: string, answer: string): Promis
     .single();
 
   if (error || !data) {
-    console.error('Error answering question:', error.message);
+    console.error('Error answering question:', error?.message);
     return null;
   }
   return data as Question;

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { checkUsernameAvailable, updateProfile } from '@/lib/database';
 import { SunIcon, MoonIcon } from '@/components/Icons';
 
 export default function SettingsPage() {
@@ -11,14 +12,26 @@ export default function SettingsPage() {
   const { user, logout } = useAuth();
   
   const [bio, setBio] = useState(user?.bio || '');
+  const [username, setUsername] = useState(user?.username || '');
   const [saving, setSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
 
-  const handleSaveBio = () => {
+  const handleSaveBio = async () => {
     if (user) {
       setSaving(true);
-      const updatedUser = { ...user, bio };
-      localStorage.setItem('exotic-user', JSON.stringify(updatedUser));
-      setTimeout(() => setSaving(false), 500);
+      setUsernameError(null);
+
+      if (username !== user.username) {
+        const available = await checkUsernameAvailable(username);
+        if (!available) {
+          setUsernameError('Username is already taken');
+          setSaving(false);
+          return;
+        }
+      }
+
+      await updateProfile(user.id, { bio, username });
+      setSaving(false);
     }
   };
 
@@ -85,16 +98,23 @@ export default function SettingsPage() {
             <label className="text-sm opacity-70" style={{ color: 'var(--text-primary)' }}>
               Username
             </label>
-            <input
+             <input
               type="text"
-              value={user.username}
-              disabled
-              className="w-full p-3 rounded-xl text-base opacity-60"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+                setUsernameError(null);
+              }}
+              className="w-full p-3 rounded-xl text-base"
               style={{ 
-                backgroundColor: 'rgba(128,128,128,0.1)',
-                color: 'var(--text-primary)'
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                border: usernameError ? '1px solid #ef4444' : '1px solid rgba(128,128,128,0.2)'
               }}
             />
+            {usernameError && (
+              <p className="text-xs" style={{ color: '#ef4444' }}>{usernameError}</p>
+            )}
           </div>
 
           <div className="space-y-2">
