@@ -56,6 +56,8 @@ export default function ProfilePage() {
       method: 'POST',
       body: JSON.stringify({ id })
     });
+    // Remove deleted question from local state
+    refetch?.();
   };
 
   const handleShare = (question: Question) => {
