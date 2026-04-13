@@ -6,13 +6,10 @@ import {
   getQuestionsForProfile, 
   getProfileByUsername,
   getProfileById,
-  createQuestion,
-  answerQuestion,
-  deleteQuestion,
-  likeQuestion,
-  unlikeQuestion,
+  updateProfile,
   getUserLikes,
-  updateProfile
+  likeQuestion,
+  unlikeQuestion
 } from '@/lib/database';
 
 export function useQuestions() {
@@ -31,6 +28,40 @@ export function useQuestions() {
     loadPublicQuestions();
   }, [loadPublicQuestions]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('public_questions')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'questions',
+        filter: 'is_answered=eq.true'
+      }, (payload: any) => {
+        setQuestions(prev => [payload.new as Question, ...prev]);
+      })
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'questions' 
+      }, (payload: any) => {
+        setQuestions(prev => prev.map(q => 
+          q.id === payload.new.id ? { ...q, ...payload.new } : q
+        ));
+      })
+      .on('postgres_changes', { 
+        event: 'DELETE', 
+        schema: 'public', 
+        table: 'questions' 
+      }, (payload: any) => {
+        setQuestions(prev => prev.filter(q => q.id !== payload.old.id));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   return { questions, loading, error, refetch: loadPublicQuestions };
 }
 
@@ -38,6 +69,10 @@ export function useProfileQuestions(profileId: string, includePrivate: boolean =
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadQuestions();
+  }, [profileId, includePrivate]);
 
   const loadQuestions = useCallback(async () => {
     setLoading(true);
@@ -47,11 +82,11 @@ export function useProfileQuestions(profileId: string, includePrivate: boolean =
   }, [profileId, includePrivate]);
 
   useEffect(() => {
-    loadQuestions();
-  }, [loadQuestions]);
-
-  useEffect(() => {
-    if (!profileId || profileId === '') return;
+    if (!profileId || profileId === '') {
+      setQuestions([]);
+      setLoading(false);
+      return;
+    }
 
     const channel = supabase
       .channel(`profile_questions_${profileId}`)
@@ -60,18 +95,21 @@ export function useProfileQuestions(profileId: string, includePrivate: boolean =
         schema: 'public', 
         table: 'questions',
         filter: `recipient_id=eq.${profileId}`
-      }, (payload) => {
-        const newQ = payload.new as Question;
-        if (includePrivate || newQ.is_answered) {
-          setQuestions(prev => [newQ, ...prev]);
-        }
+      }, (payload: any) => {
+        setQuestions(prev => {
+          const newQ = payload.new as Question;
+          if (includePrivate || newQ.is_answered) {
+            return [newQ, ...prev];
+          }
+          return prev;
+        });
       })
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
         table: 'questions',
         filter: `recipient_id=eq.${profileId}`
-      }, (payload) => {
+      }, (payload: any) => {
         setQuestions(prev => prev.map(q => 
           q.id === payload.new.id ? { ...q, ...payload.new } : q
         ));
@@ -81,7 +119,7 @@ export function useProfileQuestions(profileId: string, includePrivate: boolean =
         schema: 'public', 
         table: 'questions',
         filter: `recipient_id=eq.${profileId}`
-      }, (payload) => {
+      }, (payload: any) => {
         setQuestions(prev => prev.filter(q => q.id !== payload.old.id));
       })
       .subscribe();
@@ -95,42 +133,7 @@ export function useProfileQuestions(profileId: string, includePrivate: boolean =
     return { questions: [], loading: false, error: 'Invalid profile ID', refetch: loadQuestions };
   }
 
-  const handleCreate = async (question: {
-    content: string;
-    recipient_id: string;
-    author_id?: string | null;
-    is_anonymous?: boolean;
-  }) => {
-    return await createQuestion(question);
-  };
-
-  const handleAnswer = async (questionId: string, answer: string) => {
-    const updated = await answerQuestion(questionId, answer);
-    if (updated) {
-      setQuestions(prev => prev.map(q => 
-        q.id === questionId ? { ...q, answer, is_answered: true } : q
-      ));
-    }
-    return updated;
-  };
-
-  const handleDelete = async (questionId: string) => {
-    const success = await deleteQuestion(questionId);
-    if (success) {
-      setQuestions(prev => prev.filter(q => q.id !== questionId));
-    }
-    return success;
-  };
-
-  return { 
-    questions, 
-    loading, 
-    error, 
-    refetch: loadQuestions,
-    createQuestion: handleCreate,
-    answerQuestion: handleAnswer,
-    deleteQuestion: handleDelete
-  };
+  return { questions, loading, error, refetch: loadQuestions };
 }
 
 export function useProfile(username?: string, userId?: string) {
@@ -164,7 +167,7 @@ export function useProfile(username?: string, userId?: string) {
         schema: 'public', 
         table: 'profiles',
         filter: `username=eq.${username}`
-      }, (payload) => {
+      }, (payload: any) => {
         setProfile(prev => prev ? { ...prev, ...payload.new } : null);
       })
       .subscribe();
@@ -215,7 +218,7 @@ export function useLikes(userId?: string) {
         schema: 'public', 
         table: 'likes',
         filter: `user_id=eq.${userId}`
-      }, (payload) => {
+      }, (payload: any) => {
         const newLike = payload.new as { question_id: string };
         setLikedQuestions(prev => [...prev, newLike.question_id]);
       })
@@ -224,7 +227,7 @@ export function useLikes(userId?: string) {
         schema: 'public', 
         table: 'likes',
         filter: `user_id=eq.${userId}`
-      }, (payload) => {
+      }, (payload: any) => {
         const oldLike = payload.old as { question_id: string };
         setLikedQuestions(prev => prev.filter(id => id !== oldLike.question_id));
       })
@@ -273,7 +276,7 @@ export function useQuestionRealtime(questionId: string) {
         schema: 'public', 
         table: 'questions',
         filter: `id=eq.${questionId}`
-      }, (payload) => {
+      }, (payload: any) => {
         setQuestion(prev => prev ? { ...prev, ...payload.new } : null);
       })
       .subscribe();
