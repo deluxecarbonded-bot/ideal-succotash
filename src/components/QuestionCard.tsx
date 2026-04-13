@@ -33,6 +33,8 @@ export default function QuestionCard({
   const [showAnswerForm, setShowAnswerForm] = useState(false);
   const [answerText, setAnswerText] = useState('');
   const [showMenu, setShowMenu] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showShareSuccess, setShowShareSuccess] = useState(false);
 
   const handleLike = () => {
     setLiked(!liked);
@@ -107,14 +109,29 @@ export default function QuestionCard({
                   border: '1px solid rgba(128,128,128,0.2)'
                 }}
               >
-                {canDelete && (
+                {onShare && (
                   <button
                     onClick={() => {
-                      onDelete?.(question.id);
+                      onShare?.(question);
+                      setShowShareSuccess(true);
                       setShowMenu(false);
+                      setTimeout(() => setShowShareSuccess(false), 2000);
                     }}
                     className="flex items-center gap-2 px-4 py-2 w-full text-left hover:opacity-80"
                     style={{ color: 'var(--text-primary)' }}
+                  >
+                    <ShareIcon className="w-4 h-4" />
+                    Share
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={() => {
+                      setShowConfirmDelete(true);
+                      setShowMenu(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 w-full text-left hover:opacity-80"
+                    style={{ color: '#ef4444' }}
                   >
                     <TrashIcon className="w-4 h-4" />
                     Delete
@@ -234,6 +251,55 @@ export default function QuestionCard({
           {formatDate(question.created_at)}
         </span>
       </div>
+
+      <AnimatePresence>
+        {showConfirmDelete && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 p-4 rounded-xl"
+            style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+          >
+            <p className="mb-3" style={{ color: 'var(--text-primary)' }}>Delete this question?</p>
+            <div className="flex gap-2">
+              <motion.button
+                onClick={() => {
+                  onDelete?.(question.id);
+                  setShowConfirmDelete(false);
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ backgroundColor: '#ef4444', color: '#ffffff' }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Confirm Delete
+              </motion.button>
+              <motion.button
+                onClick={() => setShowConfirmDelete(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium opacity-60 hover:opacity-100"
+                style={{ color: 'var(--text-primary)' }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Cancel
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showShareSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed bottom-8 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-xl z-50"
+            style={{ backgroundColor: 'var(--btn-bg)', color: 'var(--btn-text)' }}
+          >
+            Link copied to clipboard
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
