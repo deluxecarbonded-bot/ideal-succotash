@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams } from 'next/navigation';
-import { Question, User } from '@/types';
+import { Question, Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { getProfileByUsername, getQuestionsForProfile, getUserLikes, answerQuestion as dbAnswerQuestion, deleteQuestion as dbDeleteQuestion } from '@/lib/database';
 import QuestionCard from '@/components/QuestionCard';
 import ProfileCard from '@/components/ProfileCard';
 
@@ -13,59 +14,63 @@ export default function ProfilePage() {
   const username = params?.username as string | undefined;
   const { user: currentUser } = useAuth();
   
-  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [profileUser, setProfileUser] = useState<Profile | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [filter, setFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
   const [loading, setLoading] = useState(true);
+  const [likedQuestions, setLikedQuestions] = useState<string[]>([]);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('exotic-user');
-    if (stored) {
-      setProfileUser(JSON.parse(stored));
-    } else if (username) {
-      setProfileUser({
-        id: 'user-' + username,
-        username,
-        bio: '',
-        avatar_url: null,
-        created_at: new Date().toISOString(),
-      });
-    }
-  }, [username]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('exotic-questions');
-    if (stored) {
-      const allQuestions: Question[] = JSON.parse(stored);
-      if (username) {
-        setQuestions(allQuestions.filter(q => q.recipient?.username === username));
-      } else if (currentUser) {
-        setQuestions(allQuestions.filter(q => q.recipient_id === currentUser.id));
-      } else {
-        setQuestions([]);
+  const loadProfile = useCallback(async () => {
+    setLoading(true);
+    if (username) {
+      const profile = await getProfileByUsername(username);
+      if (profile) {
+        setProfileUser(profile);
+        const qs = await getQuestionsForProfile(profile.id, !username || username === currentUser?.username);
+        setQuestions(qs);
       }
+    } else if (currentUser) {
+      setProfileUser(currentUser);
+      const qs = await getQuestionsForProfile(currentUser.id, true);
+      setQuestions(qs);
     }
     setLoading(false);
   }, [username, currentUser]);
 
+  const loadUserLikes = useCallback(async () => {
+    if (!currentUser) return;
+    const likes = await getUserLikes(currentUser.id);
+    setLikedQuestions(likes);
+  }, [currentUser]);
+
   useEffect(() => {
-    if (profileUser) {
-      localStorage.setItem('exotic-questions', JSON.stringify(questions));
+    loadProfile();
+  }, [loadProfile]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadUserLikes();
     }
-  }, [questions, profileUser]);
+  }, [currentUser, loadUserLikes]);
 
   const isOwner = !username || (currentUser?.username === username);
 
-  const filteredQuestions = questions.filter((q) => {
+  const filteredQuestions = questions.map(q => ({
+    ...q,
+    is_liked: likedQuestions.includes(q.id),
+  })).filter((q) => {
     if (filter === 'answered') return q.is_answered;
     if (filter === 'unanswered') return !q.is_answered;
     return true;
   });
 
-  const handleAnswer = (id: string, answer: string) => {
-    setQuestions(questions.map(q => 
-      q.id === id ? { ...q, answer, is_answered: true } : q
-    ));
+  const handleAnswer = async (id: string, answer: string) => {
+    const updated = await dbAnswerQuestion(id, answer);
+    if (updated) {
+      setQuestions(questions.map(q => 
+        q.id === id ? { ...q, answer, is_answered: true } : q
+      ));
+    }
   };
 
   const handleLike = (id: string) => {
@@ -74,8 +79,11 @@ export default function ProfilePage() {
     ));
   };
 
-  const handleDelete = (id: string) => {
-    setQuestions(questions.filter(q => q.id !== id));
+  const handleDelete = async (id: string) => {
+    const success = await dbDeleteQuestion(id);
+    if (success) {
+      setQuestions(questions.filter(q => q.id !== id));
+    }
   };
 
   const handleShare = (question: Question) => {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Question } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { getPublicQuestions, getUserLikes } from '@/lib/database';
 import QuestionCard from '@/components/QuestionCard';
 
 export default function HomePage() {
@@ -11,28 +12,32 @@ export default function HomePage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [filter, setFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
   const [loading, setLoading] = useState(true);
+  const [likedQuestions, setLikedQuestions] = useState<string[]>([]);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('exotic-questions');
-    if (stored) {
-      setQuestions(JSON.parse(stored));
-    } else {
-      setQuestions([]);
-    }
+  const loadQuestions = useCallback(async () => {
+    setLoading(true);
+    const data = await getPublicQuestions(50);
+    setQuestions(data);
     setLoading(false);
   }, []);
 
+  const loadUserLikes = useCallback(async () => {
+    if (!user) return;
+    const likes = await getUserLikes(user.id);
+    setLikedQuestions(likes);
+  }, [user]);
+
   useEffect(() => {
-    localStorage.setItem('exotic-questions', JSON.stringify(questions));
-  }, [questions]);
+    loadQuestions();
+  }, [loadQuestions]);
 
-  const filteredQuestions = questions.filter((q) => {
-    if (filter === 'answered') return q.is_answered;
-    if (filter === 'unanswered') return !q.is_answered;
-    return true;
-  });
+  useEffect(() => {
+    if (user) {
+      loadUserLikes();
+    }
+  }, [user, loadUserLikes]);
 
-  const handleLike = (id: string) => {
+  const handleLike = async (id: string) => {
     setQuestions(questions.map(q => 
       q.id === id ? { ...q, is_liked: !q.is_liked, likes_count: q.is_liked ? q.likes_count - 1 : q.likes_count + 1 } : q
     ));
@@ -52,6 +57,15 @@ export default function HomePage() {
     { key: 'answered', label: 'Answered' },
     { key: 'unanswered', label: 'Unanswered' },
   ];
+
+  const filteredQuestions = questions.map(q => ({
+    ...q,
+    is_liked: likedQuestions.includes(q.id),
+  })).filter((q) => {
+    if (filter === 'answered') return q.is_answered;
+    if (filter === 'unanswered') return !q.is_answered;
+    return true;
+  });
 
   return (
     <div className="space-y-6">

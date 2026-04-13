@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Question, User } from '@/types';
+import { Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { getProfileByUsername, getProfileById, createQuestion } from '@/lib/database';
 import QuestionForm from '@/components/QuestionForm';
 import { ArrowLeftIcon } from '@/components/Icons';
 import Link from 'next/link';
@@ -15,70 +16,46 @@ function AskContent() {
   const username = params?.username as string | undefined;
   const { user } = useAuth();
   
-  const [recipient, setRecipient] = useState<User | null>(null);
+  const [recipient, setRecipient] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadRecipient = useCallback(async () => {
+    setLoading(true);
     if (username) {
-      const stored = localStorage.getItem('exotic-user');
-      if (stored) {
-        const storedUser: User = JSON.parse(stored);
-        if (storedUser.username === username) {
-          setRecipient(storedUser);
-        } else {
-          setRecipient({
-            id: 'user-' + username,
-            username,
-            bio: '',
-            avatar_url: null,
-            created_at: new Date().toISOString(),
-          });
-        }
-      } else {
-        setRecipient({
-          id: 'user-' + username,
-          username,
-          bio: '',
-          avatar_url: null,
-          created_at: new Date().toISOString(),
-        });
-      }
-    } else {
-      const stored = localStorage.getItem('exotic-user');
-      if (stored) {
-        setRecipient(JSON.parse(stored));
-      }
+      const profile = await getProfileByUsername(username);
+      setRecipient(profile);
+    } else if (user) {
+      const profile = await getProfileById(user.id);
+      setRecipient(profile);
     }
     setLoading(false);
-  }, [username]);
+  }, [username, user]);
 
-  const handleSubmit = (content: string, isAnonymous: boolean) => {
+  useEffect(() => {
+    loadRecipient();
+  }, [loadRecipient]);
+
+  const handleSubmit = async (content: string, isAnonymous: boolean) => {
     if (!user) {
       router.push('/login');
       return;
     }
 
-    const stored = localStorage.getItem('exotic-questions');
-    let questions: Question[] = stored ? JSON.parse(stored) : [];
+    if (!recipient) {
+      router.push('/login');
+      return;
+    }
 
-    const newQuestion: Question = {
-      id: 'q-' + Date.now(),
+    const question = await createQuestion({
       content,
+      recipient_id: recipient.id,
       author_id: isAnonymous ? null : user.id,
-      recipient_id: recipient?.id || user.id,
-      answer: null,
-      is_answered: false,
       is_anonymous: isAnonymous,
-      likes_count: 0,
-      created_at: new Date().toISOString(),
-      recipient: recipient || user,
-      author: isAnonymous ? null : user,
-    };
+    });
 
-    questions.push(newQuestion);
-    localStorage.setItem('exotic-questions', JSON.stringify(questions));
-
-    router.push('/profile');
+    if (question) {
+      router.push('/profile');
+    }
   };
 
   if (loading) {

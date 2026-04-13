@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Question, User } from '@/types';
+import { Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { getProfileByUsername, createQuestion } from '@/lib/database';
 import QuestionForm from '@/components/QuestionForm';
 import { ArrowLeftIcon } from '@/components/Icons';
 import Link from 'next/link';
@@ -15,65 +16,43 @@ function AskUserContent() {
   const username = params?.username as string;
   const { user } = useAuth();
   
-  const [recipient, setRecipient] = useState<User | null>(null);
+  const [recipient, setRecipient] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadRecipient = useCallback(async () => {
+    setLoading(true);
     if (username) {
-      const stored = localStorage.getItem('exotic-user');
-      if (stored) {
-        const storedUser: User = JSON.parse(stored);
-        if (storedUser.username === username) {
-          setRecipient(storedUser);
-        } else {
-          setRecipient({
-            id: 'user-' + username,
-            username,
-            bio: '',
-            avatar_url: null,
-            created_at: new Date().toISOString(),
-          });
-        }
-      } else {
-        setRecipient({
-          id: 'user-' + username,
-          username,
-          bio: '',
-          avatar_url: null,
-          created_at: new Date().toISOString(),
-        });
-      }
+      const profile = await getProfileByUsername(username);
+      setRecipient(profile);
     }
     setLoading(false);
   }, [username]);
 
-  const handleSubmit = (content: string, isAnonymous: boolean) => {
+  useEffect(() => {
+    loadRecipient();
+  }, [loadRecipient]);
+
+  const handleSubmit = async (content: string, isAnonymous: boolean) => {
     if (!user) {
       router.push('/login');
       return;
     }
 
-    const stored = localStorage.getItem('exotic-questions');
-    let questions: Question[] = stored ? JSON.parse(stored) : [];
+    if (!recipient) {
+      router.push('/login');
+      return;
+    }
 
-    const newQuestion: Question = {
-      id: 'q-' + Date.now(),
+    const question = await createQuestion({
       content,
+      recipient_id: recipient.id,
       author_id: isAnonymous ? null : user.id,
-      recipient_id: recipient?.id || '',
-      answer: null,
-      is_answered: false,
       is_anonymous: isAnonymous,
-      likes_count: 0,
-      created_at: new Date().toISOString(),
-      recipient: recipient || undefined,
-      author: isAnonymous ? null : user,
-    };
+    });
 
-    questions.push(newQuestion);
-    localStorage.setItem('exotic-questions', JSON.stringify(questions));
-
-    router.push(`/profile/${username}`);
+    if (question) {
+      router.push(`/profile/${username}`);
+    }
   };
 
   if (loading) {

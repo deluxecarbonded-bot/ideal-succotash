@@ -1,63 +1,61 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useParams } from 'next/navigation';
-import { Question, User } from '@/types';
+import { motion } from 'framer-motion';
+import { Question, Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { getProfileByUsername, getQuestionsForProfile, getUserLikes } from '@/lib/database';
 import QuestionCard from '@/components/QuestionCard';
 import ProfileCard from '@/components/ProfileCard';
-import { LinkIcon } from '@/components/Icons';
 
 function ProfileContent() {
   const params = useParams();
   const username = params?.username as string;
   const { user: currentUser } = useAuth();
   
-  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [profileUser, setProfileUser] = useState<Profile | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [filter, setFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
+  const [filter, setFilter] = useState<'all' | 'answered'>('all');
   const [loading, setLoading] = useState(true);
+  const [likedQuestions, setLikedQuestions] = useState<string[]>([]);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('exotic-user');
-    if (stored) {
-      const storedUser: User = JSON.parse(stored);
-      if (storedUser.username === username) {
-        setProfileUser(storedUser);
-      } else {
-        setProfileUser({
-          id: 'user-' + username,
-          username,
-          bio: '',
-          avatar_url: null,
-          created_at: new Date().toISOString(),
-        });
+  const loadProfile = useCallback(async () => {
+    setLoading(true);
+    if (username) {
+      const profile = await getProfileByUsername(username);
+      if (profile) {
+        setProfileUser(profile);
+        const qs = await getQuestionsForProfile(profile.id, false);
+        setQuestions(qs);
       }
-    } else {
-      setProfileUser({
-        id: 'user-' + username,
-        username,
-        bio: '',
-        avatar_url: null,
-        created_at: new Date().toISOString(),
-      });
-    }
-  }, [username]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('exotic-questions');
-    if (stored) {
-      const allQuestions: Question[] = JSON.parse(stored);
-      setQuestions(allQuestions.filter(q => q.recipient?.username === username && q.is_answered));
     }
     setLoading(false);
   }, [username]);
 
+  const loadUserLikes = useCallback(async () => {
+    if (!currentUser) return;
+    const likes = await getUserLikes(currentUser.id);
+    setLikedQuestions(likes);
+  }, [currentUser]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadUserLikes();
+    }
+  }, [currentUser, loadUserLikes]);
+
   const isOwner = currentUser?.username === username;
 
-  const filteredQuestions = questions.filter((q) => {
+  const filteredQuestions = questions.map(q => ({
+    ...q,
+    is_liked: likedQuestions.includes(q.id),
+  })).filter((q) => {
     if (filter === 'answered') return q.is_answered;
-    if (filter === 'unanswered') return !q.is_answered;
     return true;
   });
 
@@ -73,7 +71,7 @@ function ProfileContent() {
   };
 
   const stats = {
-    questionsReceived: questions.length + (isOwner ? questions.filter(q => !q.is_answered).length : 0),
+    questionsReceived: questions.length,
     questionsAnswered: questions.filter(q => q.is_answered).length,
     likes: questions.reduce((sum, q) => sum + q.likes_count, 0),
   };
@@ -104,21 +102,23 @@ function ProfileContent() {
 
       <div className="flex justify-center">
         <a href={`/ask/${username}`}>
-          <button
+          <motion.button
             className="px-6 py-2 rounded-xl font-medium"
             style={{ 
               backgroundColor: 'var(--btn-bg)', 
               color: 'var(--btn-text)' 
             }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.95 }}
           >
             Ask Question
-          </button>
+          </motion.button>
         </a>
       </div>
 
       <div className="flex gap-2 justify-center">
         {(['all', 'answered'] as const).map((f) => (
-          <button
+          <motion.button
             key={f}
             onClick={() => setFilter(f)}
             className="px-4 py-2 rounded-xl text-sm font-medium capitalize"
@@ -127,9 +127,10 @@ function ProfileContent() {
               color: filter === f ? 'var(--btn-text)' : 'var(--text-primary)',
               border: '1px solid rgba(128,128,128,0.2)'
             }}
+            whileTap={{ scale: 0.95 }}
           >
             {f}
-          </button>
+          </motion.button>
         ))}
       </div>
 
