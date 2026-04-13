@@ -1,0 +1,95 @@
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { SendIcon } from './Icons';
+
+interface QuestionFormProps {
+  recipientUsername?: string;
+  onSubmit: (content: string, isAnonymous: boolean) => void;
+  placeholder?: string;
+}
+
+export default function QuestionForm({ 
+  recipientUsername, 
+  onSubmit, 
+  placeholder = 'Ask a question...' 
+}: QuestionFormProps) {
+  const [content, setContent] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(true);
+  const maxLength = 500;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (content.trim()) {
+      onSubmit(content, isAnonymous);
+      setContent('');
+    }
+  };
+
+  return (
+    <motion.form
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      onSubmit={handleSubmit}
+      className="p-4 rounded-2xl"
+      style={{ 
+        backgroundColor: 'var(--bg-primary)',
+        border: '1px solid rgba(128,128,128,0.15)'
+      }}
+    >
+      {recipientUsername && (
+        <p className="mb-3 text-sm opacity-60" style={{ color: 'var(--text-primary)' }}>
+          Ask @{recipientUsername}
+        </p>
+      )}
+
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value.slice(0, maxLength))}
+        placeholder={placeholder}
+        className="w-full p-3 rounded-xl text-base resize-none min-h-[100px]"
+        style={{ 
+          backgroundColor: 'var(--bg-primary)',
+          color: 'var(--text-primary)',
+          border: '1px solid rgba(128,128,128,0.2)'
+        }}
+      />
+
+      <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Anonymous</span>
+          </label>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-sm" style={{ color: 'var(--text-primary)', opacity: content.length > maxLength * 0.8 ? 1 : 0.5 }}>
+            {content.length}/{maxLength}
+          </span>
+
+          <motion.button
+            type="submit"
+            disabled={!content.trim()}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
+            style={{ 
+              backgroundColor: 'var(--btn-bg)', 
+              color: 'var(--btn-text)' 
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <SendIcon />
+            Send
+          </motion.button>
+        </div>
+      </div>
+    </motion.form>
+  );
+}

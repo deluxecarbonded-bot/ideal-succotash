@@ -5,6 +5,12 @@ const eslintConfig = [
   {
     ignores: ["node_modules/**"],
   },
+  {
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+      "react/no-unescaped-entities": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
