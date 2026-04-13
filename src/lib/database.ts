@@ -79,10 +79,15 @@ export async function updateProfile(id: string, updates: Partial<Profile>): Prom
     .eq('id', id)
     .select();
   
-  if (error || !data || data.length === 0) {
-    console.error('Error updating profile:', error?.message);
+  if (error) {
+    console.error('Error updating profile:', error.message);
     return null;
   }
+  
+  if (!data || data.length === 0) {
+    return null;
+  }
+  
   return data[0] as Profile;
 }
 
