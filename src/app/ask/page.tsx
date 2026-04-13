@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getProfileByUsername, getQuestionsForProfile, createQuestion as dbCreateQuestion } from '@/lib/database';
 import QuestionForm from '@/components/QuestionForm';
+import UserSearch from '@/components/UserSearch';
 import { ArrowLeftIcon } from '@/components/Icons';
 import Link from 'next/link';
 
@@ -87,12 +88,22 @@ function AskPageContent() {
 
       <div className="text-center py-4">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-          {username ? `Ask @${username}` : 'Ask a Question'}
+          {recipient ? `Ask @${recipient.username}` : 'Ask a Question'}
         </h1>
         <p className="mt-2 opacity-60" style={{ color: 'var(--text-primary)' }}>
-          {username ? 'Send an anonymous question' : 'Ask yourself or someone else'}
+          {recipient ? 'Send an anonymous question' : 'Search for a user to ask them a question'}
         </p>
       </div>
+
+      {!username && (
+        <div className="mb-4">
+          <UserSearch
+            selectedUser={recipient}
+            onSelectUser={setRecipient}
+            placeholder="Search for a user by username..."
+          />
+        </div>
+      )}
 
       <QuestionForm
         recipientUsername={username || undefined}
