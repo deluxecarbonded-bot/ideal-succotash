@@ -60,7 +60,9 @@ export default function ProfilePage() {
 
   const handleShare = (question: Question) => {
     const url = `${window.location.origin}/profile/${question.recipient?.username}?question=${question.id}`;
-    navigator.clipboard.writeText(url);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).catch(() => {});
+    }
   };
 
   const handleUpdateProfile = async (updates: Partial<Profile>) => {

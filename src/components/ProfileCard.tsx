@@ -26,7 +26,9 @@ export default function ProfileCard({ user, stats, isOwner, onEditProfile, onUpd
 
   const copyLink = () => {
     const url = `${window.location.origin}/profile/${user.username}`;
-    navigator.clipboard.writeText(url);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).catch(() => {});
+    }
   };
 
   const handleSave = async () => {

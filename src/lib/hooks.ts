@@ -71,6 +71,11 @@ export function useProfileQuestions(profileId: string, includePrivate: boolean =
   const [error, setError] = useState<string | null>(null);
 
   const loadQuestions = useCallback(async () => {
+    if (!profileId || profileId === '') {
+      setQuestions([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const data = await getQuestionsForProfile(profileId, includePrivate);
     setQuestions(data);
