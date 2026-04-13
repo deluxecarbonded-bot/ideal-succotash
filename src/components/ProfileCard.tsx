@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { User, Profile } from '@/types';
 import { LinkIcon, EditIcon, CheckIcon, CloseIcon } from './Icons';
@@ -86,7 +87,7 @@ export default function ProfileCard({ user, stats, isOwner, onEditProfile, onUpd
           }}
         >
           {user.avatar_url ? (
-            <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover rounded-full" />
+            <Image src={user.avatar_url} alt={user.username} fill className="object-cover rounded-full" />
           ) : (
             user.username.charAt(0).toUpperCase()
           )}
