@@ -80,7 +80,7 @@ export default function QuestionCard({
           {question.is_anonymous ? (
             <p className="text-sm opacity-50">Anonymous</p>
           ) : (
-            <p className="text-sm opacity-50">@{question.author?.username || 'user'}</p>
+            <p className="text-sm opacity-50">{question.author?.username || 'User'}</p>
           )}
           <p className="mt-1 text-lg" style={{ color: 'var(--text-primary)' }}>
             {question.content}
