@@ -4,7 +4,7 @@
 
 **Application Status**: ✅ Production Ready
 
-Full-stack anonymous Q&A social platform built with Next.js 16, featuring real-time updates, theme switching, and Supabase-ready architecture.
+Full-stack anonymous Q&A social platform built with Next.js 16, featuring real-time updates, theme switching, and Supabase-connected backend.
 
 ## Recently Completed
 
@@ -18,6 +18,11 @@ Full-stack anonymous Q&A social platform built with Next.js 16, featuring real-t
 - [x] Responsive design for mobile/tablet/desktop
 - [x] Supabase schema and types prepared
 - [x] No borders, outlines, emojis, or gradients
+- [x] **Supabase database connected and configured**
+  - [x] Created profiles, questions, likes tables
+  - [x] Added RLS policies for security
+  - [x] Configured auto-profile creation trigger
+  - [x] Environment variables set in .env.local
 
 ## Current Structure
 
@@ -38,12 +43,11 @@ Full-stack anonymous Q&A social platform built with Next.js 16, featuring real-t
 
 ## Current Focus
 
-The application is complete and ready for Supabase connection. When user connects their database:
+Application is fully connected to Supabase. To enable full functionality:
 
-1. Add environment variables (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)
-2. Update AuthContext to use real Supabase auth
-3. Enable real-time subscriptions for questions
-4. Add RLS policies for security
+1. Update AuthContext to use real Supabase auth
+2. Enable real-time subscriptions for questions
+3. Connect question forms to database
 
 ## Tech Stack
 
@@ -72,7 +76,7 @@ The application is complete and ready for Supabase connection. When user connect
 
 ## Pending / Future
 
-- Connect Supabase database
+- Connect Supabase database (DONE)
 - Enable real-time subscriptions
 - Add email notifications
 - Add blocking/muting users
