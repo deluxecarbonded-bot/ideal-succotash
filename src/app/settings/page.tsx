@@ -102,7 +102,7 @@ export default function SettingsPage() {
               type="text"
               value={username}
               onChange={(e) => {
-                setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+                setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''));
                 setUsernameError(null);
               }}
               className="w-full p-3 rounded-xl text-base"
