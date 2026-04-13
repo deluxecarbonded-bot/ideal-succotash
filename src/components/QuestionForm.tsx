@@ -61,15 +61,25 @@ export default function QuestionForm({
 
       <div className="flex items-center justify-between mt-3">
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isAnonymous}
-              onChange={(e) => setIsAnonymous(e.target.checked)}
-              disabled={loading}
-              className="w-4 h-4"
-            />
-            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Anonymous</span>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div 
+              onClick={() => !loading && setIsAnonymous(!isAnonymous)} 
+              className="relative w-12 h-6 rounded-full transition-colors duration-300"
+              style={{ backgroundColor: isAnonymous ? 'var(--btn-bg)' : 'rgba(128, 128, 128, 0.2)' }}
+            >
+              <motion.div
+                layout
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="absolute top-1 w-4 h-4 rounded-full shadow-sm"
+                style={{ 
+                  backgroundColor: isAnonymous ? 'var(--btn-text)' : 'var(--text-primary)',
+                  left: isAnonymous ? 'calc(100% - 20px)' : '4px'
+                }} 
+              />
+            </div>
+            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+              {isAnonymous ? 'Anonymous' : 'Reveal Identity'}
+            </span>
           </label>
         </div>
 
