@@ -77,14 +77,13 @@ export async function updateProfile(id: string, updates: Partial<Profile>): Prom
     .from('profiles')
     .update(updates)
     .eq('id', id)
-    .select()
-    .single();
+    .select();
   
-  if (error || !data) {
+  if (error || !data || data.length === 0) {
     console.error('Error updating profile:', error?.message);
     return null;
   }
-  return data as Profile;
+  return data[0] as Profile;
 }
 
 export async function getQuestionsForProfile(recipientId: string, includePrivate: boolean = false): Promise<Question[]> {
