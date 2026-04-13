@@ -236,16 +236,20 @@ export default function QuestionCard({
           </motion.button>
         )}
 
-        {onShare && (
-          <motion.button
-            onClick={() => onShare(question)}
-            className="flex items-center gap-1 opacity-60 hover:opacity-100"
-            whileTap={{ scale: 0.9 }}
-            style={{ color: 'var(--text-primary)' }}
-          >
-            <ShareIcon />
-          </motion.button>
-        )}
+         {onShare && (
+           <motion.button
+             onClick={() => {
+               onShare?.(question);
+               setShowShareSuccess(true);
+               setTimeout(() => setShowShareSuccess(false), 2000);
+             }}
+             className="flex items-center gap-1 opacity-60 hover:opacity-100"
+             whileTap={{ scale: 0.9 }}
+             style={{ color: 'var(--text-primary)' }}
+           >
+             <ShareIcon />
+           </motion.button>
+         )}
 
         <span className="text-sm ml-auto opacity-50" style={{ color: 'var(--text-primary)' }}>
           {formatDate(question.created_at)}

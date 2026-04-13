@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { Question, Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile, useProfileQuestions, useLikes } from '@/lib/hooks';
+import { deleteQuestion } from '@/lib/database';
 import QuestionCard from '@/components/QuestionCard';
 import ProfileCard from '@/components/ProfileCard';
 
@@ -51,11 +52,8 @@ export default function ProfilePage() {
   };
 
   const handleDelete = async (id: string) => {
-    // Direct DB call for delete
-    await fetch('/api/delete', {
-      method: 'POST',
-      body: JSON.stringify({ id })
-    });
+    // Delete directly from database
+    await deleteQuestion(id);
     // Remove deleted question from local state
     refetch?.();
   };
