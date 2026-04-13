@@ -50,7 +50,7 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
   const { data, error } = await supabase
     .from('profiles')
     .select('id')
-    .eq('username', username)
+    .ilike('username', username)
     .single();
   
   return !error && !data;
