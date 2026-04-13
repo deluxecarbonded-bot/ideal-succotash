@@ -1,11 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
+import { checkUsernameAvailable } from '@/lib/database';
 import Link from 'next/link';
 import { ArrowLeftIcon } from '@/components/Icons';
+
+interface ValidationErrors {
+  username?: string;
+  email?: string;
+  password?: string;
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -16,32 +23,110 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [checkingUsername, setCheckingUsername] = useState(false);
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateUsername = (username: string): string | undefined => {
+    if (username.length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    if (username.length > 20) {
+      return 'Username must be less than 20 characters';
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return 'Username can only contain letters, numbers, and underscores';
+    }
+    if (/^[0-9]/.test(username)) {
+      return 'Username cannot start with a number';
+    }
+    return undefined;
+  };
+
+  const validatePassword = (password: string): string | undefined => {
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    if (password.length > 100) {
+      return 'Password must be less than 100 characters';
+    }
+    return undefined;
+  };
+
+  const checkUsername = useCallback(async (value: string) => {
+    const usernameError = validateUsername(value);
+    if (usernameError) {
+      setErrors(prev => ({ ...prev, username: usernameError }));
+      return;
+    }
+
+    setCheckingUsername(true);
+    const available = await checkUsernameAvailable(value);
+    setCheckingUsername(false);
+
+    if (!available) {
+      setErrors(prev => ({ ...prev, username: 'Username is already taken' }));
+    } else {
+      setErrors(prev => ({ ...prev, username: undefined }));
+    }
+  }, []);
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setUsername(value);
+    setErrors(prev => ({ ...prev, username: undefined }));
+  };
+
+  const handleUsernameBlur = () => {
+    if (username) {
+      checkUsername(username);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    if (!username || !email || !password) {
-      setError('Please fill in all fields');
-      return;
+    const newErrors: ValidationErrors = {};
+    
+    const usernameError = validateUsername(username);
+    if (usernameError) newErrors.username = usernameError;
+    
+    if (!validateEmail(email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
-
-    if (username.length < 3) {
-      setError('Username must be at least 3 characters');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    
+    const passwordError = validatePassword(password);
+    if (passwordError) newErrors.password = passwordError;
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
     setLoading(true);
     try {
+      const available = await checkUsernameAvailable(username);
+      if (!available) {
+        setErrors({ username: 'Username is already taken' });
+        setLoading(false);
+        return;
+      }
+
       await signup(email, password, username);
       router.push('/profile');
-    } catch (err) {
-      setError('Failed to create account');
+    } catch (err: any) {
+      if (err?.message?.includes('email')) {
+        setError('Email is already registered');
+      } else if (err?.message?.includes('username')) {
+        setErrors({ username: 'Username is already taken' });
+      } else {
+        setError('Failed to create account. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -82,6 +167,7 @@ export default function SignupPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         onSubmit={handleSubmit}
+        noValidate
         className="space-y-4"
       >
         {error && (
@@ -105,15 +191,32 @@ export default function SignupPage() {
           <input
             type="text"
             value={username}
-            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-            placeholder="username"
+            onChange={handleUsernameChange}
+            onBlur={handleUsernameBlur}
+            placeholder="Choose a username"
+            autoComplete="username"
             className="w-full p-3 rounded-xl text-base"
             style={{ 
               backgroundColor: 'var(--bg-primary)',
               color: 'var(--text-primary)',
-              border: '1px solid rgba(128,128,128,0.2)'
+              border: errors.username ? '1px solid #ef4444' : '1px solid rgba(128,128,128,0.2)'
             }}
           />
+          {errors.username && (
+            <p className="text-xs" style={{ color: '#ef4444' }}>
+              {errors.username}
+            </p>
+          )}
+          {checkingUsername && (
+            <p className="text-xs opacity-50" style={{ color: 'var(--text-primary)' }}>
+              Checking availability...
+            </p>
+          )}
+          {username && !errors.username && !checkingUsername && (
+            <p className="text-xs" style={{ color: '#22c55e' }}>
+              Username is available
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -123,15 +226,24 @@ export default function SignupPage() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setErrors(prev => ({ ...prev, email: undefined }));
+            }}
             placeholder="your@email.com"
+            autoComplete="email"
             className="w-full p-3 rounded-xl text-base"
             style={{ 
               backgroundColor: 'var(--bg-primary)',
               color: 'var(--text-primary)',
-              border: '1px solid rgba(128,128,128,0.2)'
+              border: errors.email ? '1px solid #ef4444' : '1px solid rgba(128,128,128,0.2)'
             }}
           />
+          {errors.email && (
+            <p className="text-xs" style={{ color: '#ef4444' }}>
+              {errors.email}
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -141,20 +253,32 @@ export default function SignupPage() {
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setErrors(prev => ({ ...prev, password: undefined }));
+            }}
             placeholder="Create a password"
+            autoComplete="new-password"
             className="w-full p-3 rounded-xl text-base"
             style={{ 
               backgroundColor: 'var(--bg-primary)',
               color: 'var(--text-primary)',
-              border: '1px solid rgba(128,128,128,0.2)'
+              border: errors.password ? '1px solid #ef4444' : '1px solid rgba(128,128,128,0.2)'
             }}
           />
+          {errors.password && (
+            <p className="text-xs" style={{ color: '#ef4444' }}>
+              {errors.password}
+            </p>
+          )}
+          <p className="text-xs opacity-50" style={{ color: 'var(--text-primary)' }}>
+            Must be at least 6 characters
+          </p>
         </div>
 
         <motion.button
           type="submit"
-          disabled={loading}
+          disabled={loading || checkingUsername}
           className="w-full px-6 py-3 rounded-xl font-medium disabled:opacity-50"
           style={{ 
             backgroundColor: 'var(--btn-bg)', 

@@ -29,8 +29,14 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push('/profile');
-    } catch (err) {
-      setError('Invalid credentials');
+    } catch (err: any) {
+      if (err?.message?.includes('Invalid login')) {
+        setError('Invalid email or password');
+      } else if (err?.message?.includes('Email not confirmed')) {
+        setError('Please confirm your email address');
+      } else {
+        setError('Invalid credentials. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -71,6 +77,7 @@ export default function LoginPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         onSubmit={handleSubmit}
+        noValidate
         className="space-y-4"
       >
         {error && (
@@ -96,11 +103,12 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com"
+            autoComplete="email"
             className="w-full p-3 rounded-xl text-base"
             style={{ 
               backgroundColor: 'var(--bg-primary)',
               color: 'var(--text-primary)',
-              border: '1px solid rgba(128,128,128,0.2)'
+              border: error && !email ? '1px solid #ef4444' : '1px solid rgba(128,128,128,0.2)'
             }}
           />
         </div>
@@ -114,11 +122,12 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
+            autoComplete="current-password"
             className="w-full p-3 rounded-xl text-base"
             style={{ 
               backgroundColor: 'var(--bg-primary)',
               color: 'var(--text-primary)',
-              border: '1px solid rgba(128,128,128,0.2)'
+              border: error && !password ? '1px solid #ef4444' : '1px solid rgba(128,128,128,0.2)'
             }}
           />
         </div>

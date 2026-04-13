@@ -46,6 +46,16 @@ export async function getProfileByUsername(username: string): Promise<Profile | 
   return data as Profile;
 }
 
+export async function checkUsernameAvailable(username: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username)
+    .single();
+  
+  return !error && !data;
+}
+
 export async function getProfileById(id: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
