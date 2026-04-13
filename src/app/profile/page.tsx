@@ -67,7 +67,7 @@ export default function ProfilePage() {
   };
 
   const handleUpdateProfile = async (updates: Partial<Profile>) => {
-    await updateUserProfile?.(updates);
+    await updateUserProfile(updates);
   };
 
   const stats = {
