@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
@@ -15,33 +15,33 @@ function AskUserContent() {
   const username = params?.username as string;
   const { user } = useAuth();
   
-  const { profile: recipient } = useProfile(username);
-  const { createQuestion } = useProfileQuestions(recipient?.id || '', false);
+  const { profile: recipient, loading: recipientLoading } = useProfile(username);
+  const { createQuestion: createQuestionFn } = useProfileQuestions(recipient?.id || '', false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (content: string, isAnonymous: boolean) => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
-    if (!recipient) {
+    if (!user || !recipient || recipientLoading) {
       router.push('/login');
       return;
     }
 
     setLoading(true);
-    const question = await createQuestion({
-      content,
-      recipient_id: recipient.id,
-      author_id: isAnonymous ? null : user.id,
-      is_anonymous: isAnonymous,
-    });
+    try {
+      const question = await createQuestionFn?.({
+        content,
+        recipient_id: recipient.id,
+        author_id: isAnonymous ? null : user.id,
+        is_anonymous: isAnonymous,
+      });
 
-    setLoading(false);
-    
-    if (question) {
-      router.push(`/profile/${username}`);
+      setLoading(false);
+      
+      if (question) {
+        router.push(`/profile/${username}`);
+      }
+    } catch (err) {
+      router.push('/login');
+      setLoading(false);
     }
   };
 
