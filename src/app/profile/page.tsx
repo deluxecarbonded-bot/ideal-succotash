@@ -10,16 +10,14 @@ import QuestionCard from '@/components/QuestionCard';
 import ProfileCard from '@/components/ProfileCard';
 
 export default function ProfilePage() {
-  const params = useParams();
-  const username = params?.username as string | undefined;
   const { user: currentUser } = useAuth();
   
   const [filter, setFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
 
-  const { profile, loading: profileLoading, updateProfile: updateUserProfile } = useProfile(username);
+  const { profile, loading: profileLoading, updateProfile: updateUserProfile } = useProfile(undefined, currentUser?.id);
   
   const profileId = profile?.id;
-  const canViewPrivate = !username || username === currentUser?.username;
+  const canViewPrivate = true;
   
   const { 
     questions, 
@@ -29,7 +27,7 @@ export default function ProfilePage() {
   
   const { likedQuestions, toggleLike, isLiked } = useLikes(currentUser?.id);
 
-  const isOwner = !username || (currentUser?.username === username);
+  const isOwner = true;
 
   const filteredQuestions = questions.map(q => ({
     ...q,
