@@ -70,16 +70,16 @@ export function useProfileQuestions(profileId: string, includePrivate: boolean =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadQuestions();
-  }, [profileId, includePrivate]);
-
   const loadQuestions = useCallback(async () => {
     setLoading(true);
     const data = await getQuestionsForProfile(profileId, includePrivate);
     setQuestions(data);
     setLoading(false);
   }, [profileId, includePrivate]);
+
+  useEffect(() => {
+    loadQuestions();
+  }, [loadQuestions]);
 
   useEffect(() => {
     if (!profileId || profileId === '') {

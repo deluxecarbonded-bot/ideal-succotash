@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { useProfile, useProfileQuestions } from '@/lib/hooks';
+import { getProfileByUsername, createQuestion as dbCreateQuestion } from '@/lib/database';
 import QuestionForm from '@/components/QuestionForm';
 import { ArrowLeftIcon } from '@/components/Icons';
 import Link from 'next/link';
@@ -15,19 +15,37 @@ function AskUserContent() {
   const username = params?.username as string;
   const { user } = useAuth();
   
-  const { profile: recipient, loading: recipientLoading } = useProfile(username);
-  const { createQuestion: createQuestionFn } = useProfileQuestions(recipient?.id || '', false);
+  const [recipient, setRecipient] = useState<any>(null);
+  const [recipientLoading, setRecipientLoading] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadRecipient() {
+      if (username) {
+        const data = await getProfileByUsername(username);
+        setRecipient(data);
+      }
+      setRecipientLoading(false);
+    }
+    loadRecipient();
+  }, [username]);
 
   const handleSubmit = async (content: string, isAnonymous: boolean) => {
-    if (!user || !recipient || recipientLoading) {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    if (!recipient || recipientLoading) {
       router.push('/login');
       return;
     }
 
     setLoading(true);
+    setError(null);
     try {
-      const question = await createQuestionFn?.({
+      await dbCreateQuestion({
         content,
         recipient_id: recipient.id,
         author_id: isAnonymous ? null : user.id,
@@ -35,15 +53,21 @@ function AskUserContent() {
       });
 
       setLoading(false);
-      
-      if (question) {
-        router.push(`/profile/${username}`);
-      }
-    } catch (err) {
-      router.push('/login');
+      router.push(`/profile/${username}`);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create question');
       setLoading(false);
+      router.push('/login');
     }
   };
+
+  if (recipientLoading) {
+    return (
+      <div className="text-center py-8 opacity-50" style={{ color: 'var(--text-primary)' }}>
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

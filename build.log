@@ -1,0 +1,73 @@
+▲ Next.js 16.1.3 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 4 errors:
+./src/app/ask/page.tsx:1:20
+Ecmascript file had an error
+[0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m
+ [90m   |[39m                    [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 2 |[39m [36mimport[39m { useRouter[33m,[39m useSearchParams } [36mfrom[39m [32m'next/navigation'[39m[33m;[39m
+ [90m 3 |[39m [36mimport[39m { useAuth } [36mfrom[39m [32m'@/context/AuthContext'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { getProfileByUsername[33m,[39m getQuestionsForProfile[33m,[39m createQuestion [36mas[39m dbCreateQuestion } [36mfrom[39m [32m'@/lib/database'[39m[33m;[39m[0m
+
+You're importing a component that needs `useEffect`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+
+ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+
+
+
+
+./src/app/ask/page.tsx:2:10
+Ecmascript file had an error
+[0m [90m 1 |[39m [36mimport[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { useRouter[33m,[39m useSearchParams } [36mfrom[39m [32m'next/navigation'[39m[33m;[39m
+ [90m   |[39m          [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 3 |[39m [36mimport[39m { useAuth } [36mfrom[39m [32m'@/context/AuthContext'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { getProfileByUsername[33m,[39m getQuestionsForProfile[33m,[39m createQuestion [36mas[39m dbCreateQuestion } [36mfrom[39m [32m'@/lib/database'[39m[33m;[39m
+ [90m 5 |[39m [36mimport[39m [33mQuestionForm[39m [36mfrom[39m [32m'@/components/QuestionForm'[39m[33m;[39m[0m
+
+You're importing a component that needs `useRouter`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+
+ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+
+
+
+
+./src/app/ask/page.tsx:2:21
+Ecmascript file had an error
+[0m [90m 1 |[39m [36mimport[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { useRouter[33m,[39m useSearchParams } [36mfrom[39m [32m'next/navigation'[39m[33m;[39m
+ [90m   |[39m                     [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 3 |[39m [36mimport[39m { useAuth } [36mfrom[39m [32m'@/context/AuthContext'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { getProfileByUsername[33m,[39m getQuestionsForProfile[33m,[39m createQuestion [36mas[39m dbCreateQuestion } [36mfrom[39m [32m'@/lib/database'[39m[33m;[39m
+ [90m 5 |[39m [36mimport[39m [33mQuestionForm[39m [36mfrom[39m [32m'@/components/QuestionForm'[39m[33m;[39m[0m
+
+You're importing a component that needs `useSearchParams`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+
+ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+
+
+
+
+./src/app/ask/page.tsx:1:10
+Ecmascript file had an error
+[0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m
+ [90m   |[39m          [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 2 |[39m [36mimport[39m { useRouter[33m,[39m useSearchParams } [36mfrom[39m [32m'next/navigation'[39m[33m;[39m
+ [90m 3 |[39m [36mimport[39m { useAuth } [36mfrom[39m [32m'@/context/AuthContext'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { getProfileByUsername[33m,[39m getQuestionsForProfile[33m,[39m createQuestion [36mas[39m dbCreateQuestion } [36mfrom[39m [32m'@/lib/database'[39m[33m;[39m[0m
+
+You're importing a component that needs `useState`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+
+ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+
+
+
+
+    at <unknown> (./src/app/ask/page.tsx:1:20)
+    at <unknown> (./src/app/ask/page.tsx:2:10)
+    at <unknown> (./src/app/ask/page.tsx:2:21)
+    at <unknown> (./src/app/ask/page.tsx:1:10)

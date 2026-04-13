@@ -24,9 +24,7 @@ export default function ProfilePage() {
   const { 
     questions, 
     loading: questionsLoading, 
-    refetch, 
-    answerQuestion, 
-    deleteQuestion 
+    refetch
   } = useProfileQuestions(profileId || '', canViewPrivate);
   
   const { likedQuestions, toggleLike, isLiked } = useLikes(currentUser?.id);
@@ -43,7 +41,11 @@ export default function ProfilePage() {
   });
 
   const handleAnswer = async (id: string, answer: string) => {
-    await answerQuestion?.(id, answer);
+    // Direct DB call for answer
+    await fetch('/api/answer', {
+      method: 'POST',
+      body: JSON.stringify({ id, answer })
+    });
   };
 
   const handleLike = async (id: string) => {
@@ -51,7 +53,11 @@ export default function ProfilePage() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteQuestion?.(id);
+    // Direct DB call for delete
+    await fetch('/api/delete', {
+      method: 'POST',
+      body: JSON.stringify({ id })
+    });
   };
 
   const handleShare = (question: Question) => {

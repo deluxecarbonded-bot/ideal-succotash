@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+'use client';
+
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getProfileByUsername, getQuestionsForProfile, createQuestion as dbCreateQuestion } from '@/lib/database';
@@ -6,10 +8,10 @@ import QuestionForm from '@/components/QuestionForm';
 import { ArrowLeftIcon } from '@/components/Icons';
 import Link from 'next/link';
 
-export default function AskPage() {
+function AskPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const username = searchParams.get('username') as string | null;
+  const username = searchParams.get('username') as string | undefined;
   const { user } = useAuth();
   
   const [recipient, setRecipient] = useState<any>(null);
@@ -31,10 +33,6 @@ export default function AskPage() {
 
   useEffect(() => {
     async function loadQuestions() {
-      if (user) {
-        const data = await getQuestionsForProfile(user.id, true);
-        setQuestions(data);
-      }
       setQuestionsLoading(false);
     }
     loadQuestions();
@@ -46,7 +44,7 @@ export default function AskPage() {
       return;
     }
 
-    if (!recipient || recipientLoading || questionsLoading || !user) {
+    if (!recipient || recipientLoading || questionsLoading) {
       router.push('/login');
       return;
     }
@@ -97,12 +95,23 @@ export default function AskPage() {
       </div>
 
       <QuestionForm
-        recipientUsername={username}
+        recipientUsername={username || undefined}
         onSubmit={handleSubmit}
         loading={loading}
-        error={error}
         placeholder={username ? 'What would you like to ask?' : 'What would you like to ask yourself or others?'}
       />
     </div>
+  );
+}
+
+export default function AskPage() {
+  return (
+    <Suspense fallback={
+      <div className="text-center py-8 opacity-50" style={{ color: 'var(--text-primary)' }}>
+        Loading...
+      </div>
+    }>
+      <AskPageContent />
+    </Suspense>
   );
 }
