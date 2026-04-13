@@ -1,10 +1,12 @@
-export interface User {
+export interface Profile {
   id: string;
   username: string;
-  bio: string;
+  bio: string | null;
   avatar_url: string | null;
   created_at: string;
 }
+
+export interface User extends Profile {}
 
 export interface Question {
   id: string;

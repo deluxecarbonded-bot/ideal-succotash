@@ -23,6 +23,10 @@ Full-stack anonymous Q&A social platform built with Next.js 16, featuring real-t
   - [x] Added RLS policies for security
   - [x] Configured auto-profile creation trigger
   - [x] Environment variables set in .env.local
+- [x] **Supabase auth integrated**
+  - [x] Updated AuthContext with real Supabase auth
+  - [x] Added database queries in src/lib/database.ts
+  - [x] Added Profile type to types/index.ts
 
 ## Current Structure
 
@@ -43,11 +47,10 @@ Full-stack anonymous Q&A social platform built with Next.js 16, featuring real-t
 
 ## Current Focus
 
-Application is fully connected to Supabase. To enable full functionality:
-
-1. Update AuthContext to use real Supabase auth
+All Supabase integration complete. Next steps:
+1. Connect question forms to database queries
 2. Enable real-time subscriptions for questions
-3. Connect question forms to database
+3. Build production and test
 
 ## Tech Stack
 
