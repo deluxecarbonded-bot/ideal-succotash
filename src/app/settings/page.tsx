@@ -159,10 +159,23 @@ export default function SettingsPage() {
             Logout
           </motion.button>
         ) : (
-          <div className="space-y-3">
-            <a href="/login">
+          <div className="flex gap-3">
+            <a href="/signup" className="flex-1">
               <motion.button
-                className="w-full px-6 py-3 rounded-xl font-medium"
+                className="w-full px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ 
+                  backgroundColor: 'rgba(128,128,128,0.15)', 
+                  color: 'var(--text-primary)' 
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Sign Up
+              </motion.button>
+            </a>
+            <a href="/login" className="flex-1">
+              <motion.button
+                className="w-full px-4 py-2 rounded-xl text-sm font-medium"
                 style={{ 
                   backgroundColor: 'var(--btn-bg)', 
                   color: 'var(--btn-text)' 
@@ -171,19 +184,6 @@ export default function SettingsPage() {
                 whileTap={{ scale: 0.95 }}
               >
                 Login
-              </motion.button>
-            </a>
-            <a href="/signup">
-              <motion.button
-                className="w-full px-6 py-3 rounded-xl font-medium"
-                style={{ 
-                  backgroundColor: 'var(--btn-bg)', 
-                  color: 'var(--btn-text)' 
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Sign Up
               </motion.button>
             </a>
           </div>
