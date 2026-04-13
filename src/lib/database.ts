@@ -1,7 +1,7 @@
 'use client';
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { User, Profile, Question, Like } from '@/types';
+import { Profile, Question } from '@/types';
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -25,6 +25,13 @@ export type QuestionRow = {
   is_answered: boolean;
   is_anonymous: boolean;
   likes_count: number;
+  created_at: string;
+};
+
+export type LikeRow = {
+  id: string;
+  user_id: string;
+  question_id: string;
   created_at: string;
 };
 
@@ -58,14 +65,17 @@ export async function updateProfile(id: string, updates: Partial<Profile>): Prom
     .select()
     .single();
   
-  if (error || !data) return null;
+  if (error || !data) {
+    console.error('Error updating profile:', error);
+    return null;
+  }
   return data as Profile;
 }
 
 export async function getQuestionsForProfile(recipientId: string, includePrivate: boolean = false): Promise<Question[]> {
   let query = supabase
     .from('questions')
-    .select('*, profiles!recipient_id(username, avatar_url)')
+    .select('*, profiles!inner(id, username, avatar_url)')
     .eq('recipient_id', recipientId)
     .order('created_at', { ascending: false });
 
@@ -75,25 +85,61 @@ export async function getQuestionsForProfile(recipientId: string, includePrivate
 
   const { data, error } = await query;
   
-  if (error) return [];
+  if (error) {
+    console.error('Error fetching questions:', error);
+    return [];
+  }
+  
   return (data || []).map((q: any) => ({
-    ...q,
-    recipient: q.profiles,
+    id: q.id,
+    content: q.content,
+    author_id: q.author_id,
+    recipient_id: q.recipient_id,
+    answer: q.answer,
+    is_answered: q.is_answered,
+    is_anonymous: q.is_anonymous,
+    likes_count: q.likes_count,
+    created_at: q.created_at,
+    recipient: q.profiles ? {
+      id: q.profiles.id,
+      username: q.profiles.username,
+      bio: q.profiles.bio,
+      avatar_url: q.profiles.avatar_url,
+      created_at: q.profiles.created_at,
+    } : undefined,
   }));
 }
 
 export async function getPublicQuestions(limit: number = 50): Promise<Question[]> {
   const { data, error } = await supabase
     .from('questions')
-    .select('*, profiles!recipient_id(username, avatar_url)')
+    .select('*, profiles!inner(id, username, avatar_url)')
     .eq('is_answered', true)
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (error) return [];
+  if (error) {
+    console.error('Error fetching public questions:', error);
+    return [];
+  }
+  
   return (data || []).map((q: any) => ({
-    ...q,
-    recipient: q.profiles,
+    id: q.id,
+    content: q.content,
+    author_id: q.author_id,
+    recipient_id: q.recipient_id,
+    answer: q.answer,
+    is_answered: q.is_answered,
+    is_anonymous: q.is_anonymous,
+    likes_count: q.likes_count,
+    created_at: q.created_at,
+    recipient: q.profiles ? {
+      id: q.profiles.id,
+      username: q.profiles.username,
+      bio: q.profiles.bio,
+      avatar_url: q.profiles.avatar_url,
+      created_at: q.profiles.created_at,
+    } : undefined,
   }));
 }
 
@@ -132,7 +178,10 @@ export async function answerQuestion(questionId: string, answer: string): Promis
     .select()
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    console.error('Error answering question:', error);
+    return null;
+  }
   return data as Question;
 }
 
@@ -142,40 +191,54 @@ export async function deleteQuestion(questionId: string): Promise<boolean> {
     .delete()
     .eq('id', questionId);
 
-  return !error;
+  if (error) {
+    console.error('Error deleting question:', error);
+    return false;
+  }
+  return true;
 }
 
 export async function likeQuestion(questionId: string, userId: string): Promise<boolean> {
-  const { error } = await supabase
+  const { error: likeError } = await supabase
     .from('likes')
     .insert({
       question_id: questionId,
       user_id: userId,
     });
 
-  if (error) return false;
+  if (likeError) {
+    console.error('Error liking question:', likeError);
+    return false;
+  }
 
-  await supabase
-    .from('questions')
-    .update({ likes_count: 1 })
-    .eq('id', questionId);
+  const { error: countError } = await supabase
+    .rpc('increment_likes_count', { question_id: questionId });
+
+  if (countError) {
+    console.error('Error updating likes count:', countError);
+  }
 
   return true;
 }
 
 export async function unlikeQuestion(questionId: string, userId: string): Promise<boolean> {
-  const { error } = await supabase
+  const { error: likeError } = await supabase
     .from('likes')
     .delete()
     .eq('question_id', questionId)
     .eq('user_id', userId);
 
-  if (error) return false;
+  if (likeError) {
+    console.error('Error unliking question:', likeError);
+    return false;
+  }
 
-  await supabase
-    .from('questions')
-    .update({ likes_count: -1 })
-    .eq('id', questionId);
+  const { error: countError } = await supabase
+    .rpc('decrement_likes_count', { question_id: questionId });
+
+  if (countError) {
+    console.error('Error updating likes count:', countError);
+  }
 
   return true;
 }
@@ -197,7 +260,10 @@ export async function getUserLikes(userId: string): Promise<string[]> {
     .select('question_id')
     .eq('user_id', userId);
 
-  if (error) return [];
+  if (error) {
+    console.error('Error fetching user likes:', error);
+    return [];
+  }
   return (data || []).map(l => l.question_id);
 }
 
@@ -208,6 +274,83 @@ export async function searchUsers(query: string, limit: number = 10): Promise<Pr
     .ilike('username', `%${query}%`)
     .limit(limit);
 
-  if (error) return [];
+  if (error) {
+    console.error('Error searching users:', error);
+    return [];
+  }
   return data || [];
+}
+
+export async function getQuestionById(questionId: string): Promise<Question | null> {
+  const { data, error } = await supabase
+    .from('questions')
+    .select('*, profiles!inner(id, username, avatar_url)')
+    .eq('id', questionId)
+    .single();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    content: data.content,
+    author_id: data.author_id,
+    recipient_id: data.recipient_id,
+    answer: data.answer,
+    is_answered: data.is_answered,
+    is_anonymous: data.is_anonymous,
+    likes_count: data.likes_count,
+    created_at: data.created_at,
+    recipient: data.profiles ? {
+      id: data.profiles.id,
+      username: data.profiles.username,
+      bio: data.profiles.bio,
+      avatar_url: data.profiles.avatar_url,
+      created_at: data.profiles.created_at,
+    } : undefined,
+  };
+}
+
+export async function getQuestionLikes(questionId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('likes')
+    .select('id', { count: 'exact' })
+    .eq('question_id', questionId);
+
+  if (error) return 0;
+  return data?.length || 0;
+}
+
+export async function deleteUserAccount(userId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Error deleting account:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function getUserStats(userId: string): Promise<{
+  questionsReceived: number;
+  questionsAnswered: number;
+  totalLikes: number;
+}> {
+  const { data: questions, error: qError } = await supabase
+    .from('questions')
+    .select('is_answered, likes_count')
+    .eq('recipient_id', userId);
+
+  if (qError) {
+    console.error('Error fetching user stats:', qError);
+    return { questionsReceived: 0, questionsAnswered: 0, totalLikes: 0 };
+  }
+
+  const questionsReceived = questions?.length || 0;
+  const questionsAnswered = questions?.filter(q => q.is_answered).length || 0;
+  const totalLikes = questions?.reduce((sum, q) => sum + (q.likes_count || 0), 0) || 0;
+
+  return { questionsReceived, questionsAnswered, totalLikes };
 }
