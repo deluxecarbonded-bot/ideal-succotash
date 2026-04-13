@@ -157,7 +157,6 @@ export default function UserSearch({ onSelectUser, selectedUser, placeholder = "
                     </div>
                     <div className="flex flex-col">
                       <span className="font-medium">@{profile.username}</span>
-                      {profile.bio && <span className="text-xs opacity-60 truncate max-w-xs">{profile.bio}</span>}
                     </div>
                   </button>
                 ))}
