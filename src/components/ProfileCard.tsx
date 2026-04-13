@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { User, Profile } from '@/types';
 import { LinkIcon, EditIcon, CheckIcon, CloseIcon } from './Icons';
@@ -23,6 +23,8 @@ export default function ProfileCard({ user, stats, isOwner, onEditProfile, onUpd
   const fillColor = theme === 'dark' ? '#ffffff' : '#000000';
   const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState(user.bio || '');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const copyLink = () => {
     const url = `${window.location.origin}/profile/${user.username}`;
@@ -54,14 +56,49 @@ export default function ProfileCard({ user, stats, isOwner, onEditProfile, onUpd
       }}
     >
       <div className="flex items-start gap-4">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file || !isOwner) return;
+            
+            setUploadingAvatar(true);
+            try {
+              const { uploadAvatar } = await import('@/lib/database');
+              await uploadAvatar(user.id, file);
+              if (onUpdate) {
+                onUpdate({});
+              }
+            } finally {
+              setUploadingAvatar(false);
+            }
+          }}
+        />
         <div 
-          className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold"
+          onClick={() => isOwner && fileInputRef.current?.click()}
+          className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold cursor-pointer overflow-hidden relative"
           style={{ 
             backgroundColor: 'rgba(128,128,128,0.15)',
             color: 'var(--text-primary)'
           }}
         >
-          {user.username.charAt(0).toUpperCase()}
+          {user.avatar_url ? (
+            <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover rounded-full" />
+          ) : (
+            user.username.charAt(0).toUpperCase()
+          )}
+          {isOwner && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity rounded-full">
+              {uploadingAvatar ? (
+                <span className="text-white text-sm">Uploading...</span>
+              ) : (
+                <span className="text-white text-xs">Change</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex-1">
