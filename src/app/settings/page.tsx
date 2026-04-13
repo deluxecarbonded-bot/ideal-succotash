@@ -4,15 +4,17 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
-import { checkUsernameAvailable, updateProfile } from '@/lib/database';
+import { checkUsernameAvailable } from '@/lib/database';
+import { useRealtimeProfile } from '@/lib/realtime-hooks';
 import { SunIcon, MoonIcon } from '@/components/Icons';
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
+  const { profile, updateProfile } = useRealtimeProfile(user?.id);
   
-  const [bio, setBio] = useState(user?.bio || '');
-  const [username, setUsername] = useState(user?.username || '');
+  const [bio, setBio] = useState(profile?.bio || user?.bio || '');
+  const [username, setUsername] = useState(profile?.username || user?.username || '');
   const [saving, setSaving] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
 
@@ -35,7 +37,7 @@ export default function SettingsPage() {
         updates.username = username;
       }
       
-      await updateProfile(user.id, updates);
+      await updateProfile(updates);
       setSaving(false);
     }
   };

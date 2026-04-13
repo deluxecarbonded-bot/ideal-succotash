@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams } from 'next/navigation';
 import { Question, Profile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { useProfile, useProfileQuestions, useLikes } from '@/lib/hooks';
+import { useProfileQuestions, useLikes } from '@/lib/hooks';
+import { useRealtimeProfile } from '@/lib/realtime-hooks';
 import { deleteQuestion } from '@/lib/database';
 import QuestionCard from '@/components/QuestionCard';
 import ProfileCard from '@/components/ProfileCard';
@@ -15,7 +16,7 @@ export default function ProfilePage() {
   
   const [filter, setFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
 
-  const { profile, loading: profileLoading, updateProfile: updateUserProfile } = useProfile(undefined, currentUser?.id);
+  const { profile, loading: profileLoading, updateProfile: updateUserProfile } = useRealtimeProfile(currentUser?.id);
   
   const profileId = profile?.id;
   const canViewPrivate = true;
