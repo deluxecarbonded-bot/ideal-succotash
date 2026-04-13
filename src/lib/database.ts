@@ -96,7 +96,11 @@ export async function getQuestionsForProfile(recipientId: string, includePrivate
 
   let query = supabase
     .from('questions')
-    .select('*')
+    .select(`
+      *,
+      author:profiles!questions_author_id_fkey(id, username, avatar_url),
+      recipient:profiles!questions_recipient_id_fkey(id, username, avatar_url)
+    `)
     .eq('recipient_id', recipientId)
     .order('created_at', { ascending: false });
 
@@ -112,36 +116,29 @@ export async function getQuestionsForProfile(recipientId: string, includePrivate
   }
 
   const questions = data || [];
-  const questionsWithRecipient: Question[] = await Promise.all(
-    questions.map(async (q: any) => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, username, bio, avatar_url, created_at')
-        .eq('id', q.recipient_id)
-        .single();
-      
-      return {
-        id: q.id,
-        content: q.content,
-        author_id: q.author_id,
-        recipient_id: q.recipient_id,
-        answer: q.answer,
-        is_answered: q.is_answered,
-        is_anonymous: q.is_anonymous,
-        likes_count: q.likes_count,
-        created_at: q.created_at,
-        recipient: profile || undefined,
-      };
-    })
-  );
-
-  return questionsWithRecipient;
+  return questions.map((q: any) => ({
+    id: q.id,
+    content: q.content,
+    author_id: q.author_id,
+    recipient_id: q.recipient_id,
+    answer: q.answer,
+    is_answered: q.is_answered,
+    is_anonymous: q.is_anonymous,
+    likes_count: q.likes_count,
+    created_at: q.created_at,
+    recipient: q.recipient,
+    author: q.is_anonymous ? null : q.author,
+  }));
 }
 
 export async function getPublicQuestions(limit: number = 50): Promise<Question[]> {
   const { data, error } = await supabase
     .from('questions')
-    .select('*')
+    .select(`
+      *,
+      author:profiles!questions_author_id_fkey(id, username, avatar_url),
+      recipient:profiles!questions_recipient_id_fkey(id, username, avatar_url)
+    `)
     .eq('is_answered', true)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -152,30 +149,19 @@ export async function getPublicQuestions(limit: number = 50): Promise<Question[]
   }
 
   const questions = data || [];
-  const questionsWithRecipient: Question[] = await Promise.all(
-    questions.map(async (q: any) => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, username, bio, avatar_url, created_at')
-        .eq('id', q.recipient_id)
-        .single();
-      
-      return {
-        id: q.id,
-        content: q.content,
-        author_id: q.author_id,
-        recipient_id: q.recipient_id,
-        answer: q.answer,
-        is_answered: q.is_answered,
-        is_anonymous: q.is_anonymous,
-        likes_count: q.likes_count,
-        created_at: q.created_at,
-        recipient: profile || undefined,
-      };
-    })
-  );
-
-  return questionsWithRecipient;
+  return questions.map((q: any) => ({
+    id: q.id,
+    content: q.content,
+    author_id: q.author_id,
+    recipient_id: q.recipient_id,
+    answer: q.answer,
+    is_answered: q.is_answered,
+    is_anonymous: q.is_anonymous,
+    likes_count: q.likes_count,
+    created_at: q.created_at,
+    recipient: q.recipient,
+    author: q.is_anonymous ? null : q.author,
+  }));
 }
 
 export async function createQuestion(question: {
@@ -214,7 +200,7 @@ export async function answerQuestion(questionId: string, answer: string): Promis
     .single();
 
   if (error || !data) {
-    console.error('Error answering question:', error?.message);
+    console.error('Error answering question:', error.message);
     return null;
   }
   return data as Question;
