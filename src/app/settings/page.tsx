@@ -30,7 +30,12 @@ export default function SettingsPage() {
         }
       }
 
-      await updateProfile(user.id, { bio, username });
+      const updates: { bio: string; username?: string } = { bio };
+      if (username !== user.username) {
+        updates.username = username;
+      }
+      
+      await updateProfile(user.id, updates);
       setSaving(false);
     }
   };
